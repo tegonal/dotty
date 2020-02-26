@@ -1,6 +1,8 @@
 package dotty.tools.repl
 
-import java.io.{File => JFile, PrintStream}
+import java.io.PrintStream
+import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, Paths}
 
 import dotty.tools.dotc.ast.Trees._
 import dotty.tools.dotc.ast.{tpd, untpd}
@@ -24,7 +26,7 @@ import dotty.tools.io._
 import org.jline.reader._
 
 import scala.annotation.tailrec
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 /** The state of the REPL contains necessary bindings instead of having to have
  *  mutation
@@ -344,14 +346,14 @@ class ReplDriver(settings: Array[String],
       } out.println(imp.show(state.context))
       state
 
-    case Load(path) =>
-      val file = new JFile(path)
-      if (file.exists) {
-        val contents = scala.io.Source.fromFile(file, "UTF-8").mkString
+    case Load(pathAsString) =>
+      val path = Paths.get(pathAsString)
+      if (Files.exists(path)) {
+        val contents = new String(Files.readAllBytes(path), StandardCharsets.UTF_8)
         run(contents)
       }
       else {
-        out.println(s"""Couldn't find file "${file.getCanonicalPath}"""")
+        out.println(s"""Couldn't find file "${path.toRealPath()}"""")
         state
       }
 

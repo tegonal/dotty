@@ -1,11 +1,12 @@
 package test
 
 import org.junit.Assert._
-import org.junit.{Before, After, Test}
+import org.junit.{After, Before, Test}
 
 import scala.io.Source
 import scala.sys.process.{Process, ProcessLogger}
-import java.io.{File => JFile, FileNotFoundException}
+import java.io.FileNotFoundException
+import java.nio.file.Files
 
 class TestScripts {
   private val lineSep = util.Properties.lineSeparator
@@ -22,14 +23,12 @@ class TestScripts {
     (ret, output)
   }
 
-  private def delete(path: String) = {
-    val file = new JFile(path)
-    if (file.exists) file.delete()
-  }
+  private def delete(path: String) =
+    Files.deleteIfExists(Paths.get(path))
 
   private def deletePackages: Unit = {
     try {
-      for (jar <- Source.fromFile("./.packages").getLines())
+      for (jar <- Files.readAllLines("./.packages"))
         delete(jar)
 
       delete("./.packages")
@@ -71,7 +70,7 @@ class TestScripts {
     assert(retFirstBuild == 0, s"building dotc failed: $out1")
 
     // Create a new file to force rebuild
-    new JFile("./compiler/src/dotty/tools/dotc/Dummy.scala").createNewFile()
+    Files.createFile(Paths.get("./compiler/src/dotty/tools/dotc/Dummy.scala"))
 
     val (retSecondBuild, output) = executeScript("./bin/dotc ./tests/pos/HelloWorld.scala")
     assert(

@@ -1,5 +1,7 @@
 package dotty.tools.benchmarks
 
+import java.nio.file.{Files, Paths}
+
 import org.openjdk.jmh.results.RunResult
 import org.openjdk.jmh.runner.Runner
 import org.openjdk.jmh.annotations._
@@ -58,7 +60,8 @@ object Bench {
   }
 
   def paramsFromFile(file: String): Array[(String, Array[String])] = {
-    Source.fromFile(file).getLines.toArray.map { l =>
+    val lines = Files.readAllLines(Paths.get(file))
+    lines.toArray(new Array[String](lines.size())).map { l =>
       val Array(param, values) = l split ':'
       (param, values split ',')
     }

@@ -11,9 +11,12 @@ import org.openjdk.jmh.runner.options.OptionsBuilder
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.results.format._
 import java.util.concurrent.TimeUnit
+import java.nio.file.{Files, Paths}
+import java.sql.Driver
 
 import java.io.{File, FileOutputStream, BufferedWriter, FileWriter}
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 import scala.io.Source
 
 object Bench {
@@ -76,8 +79,10 @@ object Bench {
     bw.close()
   }
 
-  def readCompileOptions: Seq[String] =
-    Source.fromFile(COMPILE_OPTS_FILE).getLines.toSeq
+  def readCompileOptions: mutable.Seq[String] = {
+    import scala.jdk.CollectionConverters._
+    Files.readAllLines(Paths.get(COMPILE_OPTS_FILE)).asScala
+  }
 }
 
 @State(Scope.Benchmark)
