@@ -7,7 +7,7 @@ Implicit resolution uses a new algorithm which caches implicit results
 more aggressively for performance. There are also some changes that
 affect implicits on the language level.
 
- 1. Types of implicit values and result types of implicit methods
+ 1. Types of `given` values and result types of `given` methods
     must be explicitly declared. Excepted are only values in local blocks
     where the type may still be inferred:
     ```scala
@@ -15,31 +15,31 @@ affect implicits on the language level.
 
       val ctx: Context = ...        // ok
 
-      /*!*/ implicit val x = ...    // error: type must be given explicitly
+      /*!*/ given val x = ...    // error: type must be defined explicitly
 
-      /*!*/ implicit def y = ...    // error: type must be given explicitly
+      /*!*/ given def y = ...    // error: type must be defined explicitly
 
       val y = {
-        implicit val ctx = this.ctx // ok
+        given val ctx = this.ctx // ok
         ...
       }
     ```
- 2. Nesting is now taken into account for selecting an implicit.
+ 2. Nesting is now taken into account for selecting a given.
     Consider for instance the following scenario:
     ```scala
-    def f(implicit i: C) = {
-      def g(implicit j: C) = {
-        implicitly[C]
+    def f(using i: C) = {
+      def g(using j: C) = {
+        summon[C]
       }
     }
     ```
-    This will now resolve the `implicitly` call to `j`, because `j` is nested
+    This will now resolve the `summon` call to `j`, because `j` is nested
     more deeply than `i`. Previously, this would have resulted in an
     ambiguity error. The previous possibility of an implicit search failure
     due to _shadowing_ (where an implicit is hidden by a nested definition)
     no longer applies.
 
- 3. Package prefixes no longer contribute to the implicit scope of a type.
+ 3. Package prefixes no longer contribute to the implicit search scope of a type.
     Example:
     ```scala
     package p
@@ -50,9 +50,9 @@ affect implicits on the language level.
       type C
     }
     ```
-    Both `a` and `b` are visible as implicits at the point of the definition
+    Both `a` and `b` are visible as givens at the point of the definition
     of `type C`. However, a reference to `p.o.C` outside of package `p` will
-    have only `b` in its implicit scope but not `a`.
+    have only `b` in its implicit search scope but not `a`.
 
  4. The treatment of ambiguity errors has changed. If an ambiguity is encountered
     in some recursive step of an implicit search, the ambiguity is propagated to the caller.
@@ -61,12 +61,12 @@ affect implicits on the language level.
     class A
     class B extends C
     class C
-    implicit def a1: A
-    implicit def a2: A
-    implicit def b(implicit a: A): B
-    implicit def c: C
+    given def a1: A
+    given def a2: A
+    given def b(implicit a: A): B
+    given def c: C
     ```
-    and the query `implicitly[C]`.
+    and the query `summon[C]`.
 
     This query would now be classified as ambiguous. This makes sense, after all
     there are two possible solutions, `b(a1)` and `b(a2)`, neither of which is better
@@ -82,23 +82,24 @@ affect implicits on the language level.
     which implements negation directly. For any query type `Q`: `Not[Q]` succeeds if and only if
     the implicit search for `Q` fails.
 
- 5. The treatment of divergence errors has also changed. A divergent implicit is
+ 5. The treatment of divergence errors has also changed. A divergent `given` is
     treated as a normal failure, after which alternatives are still tried. This also makes
-    sense: Encountering a divergent implicit means that we assume that no finite
-    solution can be found on the given path, but another path can still be tried. By contrast
+    sense: Encountering a divergent `given` means that we assume that no finite
+    solution can be found on the corresponding path, but another path can still be tried. By contrast
     most (but not all) divergence errors in Scala 2 would terminate the implicit
     search as a whole.
 
  6. Scala-2 gives a lower level of priority to implicit conversions with call-by-name
     parameters relative to implicit conversions with call-by-value parameters. Dotty
     drops this distinction. So the following code snippet would be ambiguous in Dotty:
+    <!-- TODO update to new conversion syntax -->
     ```scala
     implicit def conv1(x: Int): A = new A(x)
     implicit def conv2(x: => Int): A = new A(x)
     def buzz(y: A) = ???
     buzz(1)   // error: ambiguous
     ```
- 7. The rule for picking a _most specific_ alternative among a set of overloaded or implicit
+ 7. The rule for picking a _most specific_ alternative among a set of overloaded or `given`
     alternatives is refined to take context parameters into account. All else
     being equal, an alternative that takes some context parameters is taken to be less specific
     than an alternative that takes none. If both alternatives take context parameters, we try
